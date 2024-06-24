@@ -1,40 +1,43 @@
-import altair as alt
-import numpy as np
-import pandas as pd
+import google.generativeai as genai
+import os
+#from dotenv import load_dotenv
 import streamlit as st
 
-"""
-# Welcome to Streamlit!
+#load_dotenv()
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+#gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+genai.configure(api_key="AIzaSyDMvG66NCls_E-vARJuFZDwmECEeMGcSrw")
+for m in genai.list_models():
+  if 'generateContent' in m.supported_generation_methods:
+    print(f"names are {m.name} and temperature is {m.temperature}")
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+# Initialize Gemini-Pro 
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+# Add a Gemini Chat history object to Streamlit session state
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history = [])
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+#Title for ChatBot Application
+st.title("Ngobrol dengan Haraki-bot")
+st.write("powered by Google Gemini-Pro AI Model")
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+# Display prompt messages history
+for message in st.session_state.chat.history:
+    with st.chat_message("ai"):
+        st.markdown(message.parts[0].text)
+
+default_prompt = "Sebagai seorang ahli pendidikan, saya siap membantu Anda. Apa yang ingin Anda tanyakan?"
+prompt = st.chat_input(default_prompt)
+
+
+if prompt:
+  st.chat_message("user").markdown(prompt)
+  #Pass User Prompt/Message to Gemini Model and get response
+  response = st.session_state.chat.send_message(prompt)
+
+  with st.chat_message("ai"):
+     st.markdown(response.text)
+  #st.write(response['answer'])
